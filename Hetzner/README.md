@@ -10,11 +10,19 @@ This deployment bootstraps the cluster via cloud-init only (no SSH to nodes). A 
 - SSH public key (uploaded to servers)
 
 ## Backend state
-Edit `Hetzner/backend.tf` and replace `REPLACE_ME_*` values before running `terraform init`.
+Terraform backends cannot read `terraform.tfvars`. Use `-backend-config` on init:
+
+```bash
+terraform init \
+  -backend-config="bucket=REPLACE_ME" \
+  -backend-config="key=hetzner/terraform.tfstate" \
+  -backend-config="region=REPLACE_ME" \
+  -backend-config="endpoint=REPLACE_ME"
+```
 
 ## Usage
 1. Create a `terraform.tfvars` with your settings.
-2. Run `terraform init && terraform apply`.
+2. Run `terraform init` (see above) and `terraform apply`.
 
 Example `terraform.tfvars`:
 ```hcl
