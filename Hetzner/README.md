@@ -28,8 +28,8 @@ Example `terraform.tfvars`:
 hcloud_token        = "YOUR_TOKEN"
 ssh_public_key_path = "/path/to/id_ed25519.pub"
 project_name        = "k3s-ha"
-location            = "fsn1"
-ssh_allowed_cidrs   = ["62.65.58.64/32"]
+location            = "hel1"
+ssh_allowed_cidrs   = ["x.x.x.x/32"]
 ```
 2. Run `terraform init` (see below).
 

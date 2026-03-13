@@ -13,7 +13,7 @@ variable "project_name" {
 variable "location" {
   description = "Hetzner location"
   type        = string
-  default     = "fsn1"
+  default     = "hel1"
 }
 
 variable "server_count" {
@@ -84,5 +84,5 @@ variable "ssh_allowed_cidrs" {
 variable "bastion_server_type" {
   description = "Hetzner server type for bastion"
   type        = string
-  default     = "cpx11"
+  default     = "ccx1"
 }
