@@ -1,6 +1,6 @@
-# Hetzner HA Kubernetes (kubeadm)
+# Hetzner HA k3s
 
-Modular Terraform setup to create a 3x control-plane / 2x worker HA Kubernetes cluster on Hetzner Cloud with a managed load balancer and Longhorn.
+Terraform setup to create a 3-node k3s HA cluster on Hetzner Cloud. Each node is both control-plane and worker, and the Hetzner LB load-balances the API.
 
 This deployment bootstraps the cluster via cloud-init only (no SSH). Vault runs **inside** the cluster in single-node dev mode with self-signed TLS and stores the kubeconfig.
 
@@ -20,7 +20,7 @@ Example `terraform.tfvars`:
 ```hcl
 hcloud_token        = "YOUR_TOKEN"
 ssh_public_key_path = "/path/to/id_ed25519.pub"
-project_name        = "k8s-ha"
+project_name        = "k3s-ha"
 location            = "fsn1"
 vault_root_token    = "REPLACE_WITH_STRONG_TOKEN"
 ```
@@ -40,11 +40,11 @@ curl -k -H "X-Vault-Token: $VAULT_TOKEN" \
 
 ## Outputs
 - Load balancer public IP
-- Control plane / worker public IPs
+- Server public IPs
 - Vault endpoint
 
 ## Notes
-- Kubernetes version series is configurable via `kubernetes_version_series` (default `v1.30`).
+- k3s version is configurable via `k3s_version` (default: latest).
 - Ubuntu image is configurable via `image` (default `ubuntu-24.04`).
 - Longhorn chart version is optional via `longhorn_version`.
 - Vault runs in dev mode with a static root token for bootstrap convenience. Do not use as-is for production.

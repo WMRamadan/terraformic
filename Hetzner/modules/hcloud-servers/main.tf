@@ -35,6 +35,13 @@ resource "hcloud_firewall" "this" {
   rule {
     direction = "in"
     protocol  = "tcp"
+    port      = "9345"
+    source_ips = [var.internal_cidr]
+  }
+
+  rule {
+    direction = "in"
+    protocol  = "tcp"
     port      = "8472"
     source_ips = [var.internal_cidr]
   }

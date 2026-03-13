@@ -7,7 +7,7 @@ variable "hcloud_token" {
 variable "project_name" {
   description = "Prefix for all resources"
   type        = string
-  default     = "k8s-ha"
+  default     = "k3s-ha"
 }
 
 variable "location" {
@@ -16,26 +16,14 @@ variable "location" {
   default     = "fsn1"
 }
 
-variable "control_plane_count" {
-  description = "Number of control plane nodes"
+variable "server_count" {
+  description = "Number of k3s server nodes (control-plane + worker)"
   type        = number
   default     = 3
 }
 
-variable "worker_count" {
-  description = "Number of worker nodes"
-  type        = number
-  default     = 2
-}
-
-variable "control_plane_type" {
-  description = "Hetzner server type for control plane"
-  type        = string
-  default     = "cpx21"
-}
-
-variable "worker_type" {
-  description = "Hetzner server type for workers"
+variable "server_type" {
+  description = "Hetzner server type for k3s nodes"
   type        = string
   default     = "cpx31"
 }
@@ -51,10 +39,10 @@ variable "ssh_public_key_path" {
   type        = string
 }
 
-variable "kubernetes_version_series" {
-  description = "Kubernetes apt repo series (e.g., v1.30, v1.29)"
+variable "k3s_version" {
+  description = "k3s version (e.g., v1.30.5+k3s1). Leave empty for latest."
   type        = string
-  default     = "v1.30"
+  default     = ""
 }
 
 variable "pod_cidr" {

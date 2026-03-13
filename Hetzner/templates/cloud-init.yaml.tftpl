@@ -14,22 +14,21 @@ write_files:
       net.bridge.bridge-nf-call-iptables  = 1
       net.bridge.bridge-nf-call-ip6tables = 1
       net.ipv4.ip_forward                 = 1
-  - path: /usr/local/bin/k8s-bootstrap.sh
+  - path: /usr/local/bin/k3s-bootstrap.sh
     permissions: "0755"
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
 
-      role="${role}"
       is_bootstrap="${is_bootstrap}"
       lb_ip="${lb_ip}"
-      token="${kubeadm_token}"
-      cert_key="${certificate_key}"
+      k3s_token="${k3s_token}"
       pod_cidr="${pod_cidr}"
       service_cidr="${service_cidr}"
       vault_root_token="${vault_root_token}"
       vault_nodeport="${vault_nodeport}"
       longhorn_version="${longhorn_version}"
+      k3s_version="${k3s_version}"
 
       swapoff -a
       sed -i.bak '/ swap / s/^/#/' /etc/fstab
@@ -38,42 +37,27 @@ write_files:
       modprobe br_netfilter
       sysctl --system
 
-      apt-get install -y containerd open-iscsi nfs-common netcat-openbsd
-      systemctl enable --now iscsid
-      mkdir -p /etc/containerd
-      containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' > /etc/containerd/config.toml
-      systemctl restart containerd
+      apt-get install -y curl ca-certificates gnupg netcat-openbsd
 
-      apt-get install -y apt-transport-https ca-certificates curl gpg
-      mkdir -p /etc/apt/keyrings
-      curl -fsSL https://pkgs.k8s.io/core:/stable:/${k8s_version_series}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-      echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${k8s_version_series}/deb/ /' > /etc/apt/sources.list.d/kubernetes.list
-      apt-get update
-      apt-get install -y kubelet kubeadm kubectl
-      apt-mark hold kubelet kubeadm kubectl
+      export INSTALL_K3S_VERSION="$k3s_version"
+      export K3S_TOKEN="$k3s_token"
 
-      if [[ "$role" == "cp" && "$is_bootstrap" == "true" ]]; then
-        kubeadm init \
-          --control-plane-endpoint ${lb_ip}:6443 \
-          --apiserver-cert-extra-sans ${lb_ip} \
-          --token ${token} --token-ttl 0 \
-          --upload-certs --certificate-key ${cert_key} \
-          --pod-network-cidr ${pod_cidr} \
+      if [[ "$is_bootstrap" == "true" ]]; then
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --cluster-init \
+          --tls-san ${lb_ip} \
+          --cluster-cidr ${pod_cidr} \
           --service-cidr ${service_cidr}
 
-        mkdir -p /root/.kube
-        cp /etc/kubernetes/admin.conf /root/.kube/config
-
-        export KUBECONFIG=/etc/kubernetes/admin.conf
-        kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
         # Install Helm
         curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
         # Install Longhorn
         lh_arg=""
-        if [[ -n \"$longhorn_version\" ]]; then
-          lh_arg=\"--version ${longhorn_version}\"
+        if [[ -n "$longhorn_version" ]]; then
+          lh_arg="--version ${longhorn_version}"
         fi
         helm repo add longhorn https://charts.longhorn.io
         helm repo update
@@ -136,7 +120,7 @@ VAULT
 
         # Store kubeconfig in Vault (base64 to keep formatting)
         vault_addr="https://127.0.0.1:8200"
-        kubectl -n vault exec deploy/vault -- sh -lc "export VAULT_ADDR=${vault_addr}; export VAULT_TOKEN=${vault_root_token}; export VAULT_SKIP_VERIFY=true; vault secrets enable -path=secret kv || true; vault kv put secret/kubeconfig value=$(base64 -w0 /etc/kubernetes/admin.conf)"
+        kubectl -n vault exec deploy/vault -- sh -lc "export VAULT_ADDR=${vault_addr}; export VAULT_TOKEN=${vault_root_token}; export VAULT_SKIP_VERIFY=true; vault secrets enable -path=secret kv || true; vault kv put secret/kubeconfig value=$(base64 -w0 /etc/rancher/k3s/k3s.yaml)"
 
       else
         # Wait for API endpoint
@@ -147,17 +131,12 @@ VAULT
           sleep 10
         done
 
-        if [[ "$role" == "cp" ]]; then
-          kubeadm join ${lb_ip}:6443 \
-            --token ${token} \
-            --discovery-token-unsafe-skip-ca-verification \
-            --control-plane --certificate-key ${cert_key}
-        else
-          kubeadm join ${lb_ip}:6443 \
-            --token ${token} \
-            --discovery-token-unsafe-skip-ca-verification
-        fi
+        export K3S_URL="https://${lb_ip}:6443"
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --tls-san ${lb_ip} \
+          --cluster-cidr ${pod_cidr} \
+          --service-cidr ${service_cidr}
       fi
 
 runcmd:
-  - [ bash, -lc, "/usr/local/bin/k8s-bootstrap.sh" ]
+  - [ bash, -lc, "/usr/local/bin/k3s-bootstrap.sh" ]
