@@ -8,11 +8,19 @@ This deployment bootstraps the cluster via cloud-init only (no SSH to nodes). A 
 - Terraform >= 1.5
 - Hetzner Cloud API token
 - SSH public key (uploaded to servers)
-- S3-compatible bucket for Terraform state (Hetzner Object Storage)
+- S3-compatible bucket for Terraform state (AWS S3, Hetzner Object Storage, MinIO, etc.)
 
 ## Backend state
-Terraform backends cannot read `terraform.tfvars`. Use `-backend-config` on init:
+Terraform backends cannot read `terraform.tfvars`. Use `-backend-config` on init.
 
+If you are using Hetzner Object Storage, export S3-compatible credentials:
+```bash
+export AWS_ACCESS_KEY_ID="YOUR_HETZNER_ACCESS_KEY"
+export AWS_SECRET_ACCESS_KEY="YOUR_HETZNER_SECRET_KEY"
+export AWS_DEFAULT_REGION="eu-central"
+```
+
+Then init:
 ```bash
 terraform init \
   -backend-config="bucket=REPLACE_ME" \
