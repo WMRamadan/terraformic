@@ -25,8 +25,6 @@ write_files:
       k3s_token="${k3s_token}"
       pod_cidr="${pod_cidr}"
       service_cidr="${service_cidr}"
-      vault_root_token="${vault_root_token}"
-      vault_nodeport="${vault_nodeport}"
       longhorn_version="${longhorn_version}"
       k3s_version="${k3s_version}"
 
@@ -64,63 +62,6 @@ write_files:
         kubectl create namespace longhorn-system || true
         helm install longhorn longhorn/longhorn -n longhorn-system ${lh_arg}
         kubectl -n longhorn-system rollout status deploy/longhorn-manager --timeout=10m
-
-        # Deploy Vault (dev mode with self-signed TLS) and expose via NodePort
-        cat >/root/vault.yaml <<VAULT
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: vault
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: vault
-  namespace: vault
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: vault
-  template:
-    metadata:
-      labels:
-        app: vault
-    spec:
-      containers:
-        - name: vault
-          image: hashicorp/vault:1.16.3
-          args:
-            - server
-            - -dev
-            - -dev-root-token-id=${vault_root_token}
-            - -dev-listen-address=0.0.0.0:8200
-            - -dev-tls
-          ports:
-            - containerPort: 8200
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: vault
-  namespace: vault
-spec:
-  type: NodePort
-  selector:
-    app: vault
-  ports:
-    - name: https
-      port: 8200
-      targetPort: 8200
-      nodePort: ${vault_nodeport}
-VAULT
-
-        kubectl apply -f /root/vault.yaml
-        kubectl -n vault rollout status deploy/vault --timeout=5m
-
-        # Store kubeconfig in Vault (base64 to keep formatting)
-        vault_addr="https://127.0.0.1:8200"
-        kubectl -n vault exec deploy/vault -- sh -lc "export VAULT_ADDR=${vault_addr}; export VAULT_TOKEN=${vault_root_token}; export VAULT_SKIP_VERIFY=true; vault secrets enable -path=secret kv || true; vault kv put secret/kubeconfig value=$(base64 -w0 /etc/rancher/k3s/k3s.yaml)"
 
       else
         # Wait for API endpoint

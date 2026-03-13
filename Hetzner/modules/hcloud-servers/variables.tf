@@ -44,7 +44,12 @@ variable "user_data" {
 
 variable "enable_public_ssh" {
   type    = bool
-  default = true
+  default = false
+}
+
+variable "ssh_allowed_cidrs" {
+  type    = list(string)
+  default = []
 }
 
 variable "internal_cidr" {

@@ -11,6 +11,16 @@ resource "hcloud_firewall" "this" {
     }
   }
 
+  dynamic "rule" {
+    for_each = length(var.ssh_allowed_cidrs) > 0 ? [1] : []
+    content {
+      direction = "in"
+      protocol  = "tcp"
+      port      = "22"
+      source_ips = var.ssh_allowed_cidrs
+    }
+  }
+
   rule {
     direction = "in"
     protocol  = "tcp"

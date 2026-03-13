@@ -1,0 +1,27 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+write_files:
+  - path: /usr/local/bin/bastion-bootstrap.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      target_ip="${target_ip}"
+      ssh_user="${ssh_user}"
+
+      apt-get install -y curl ca-certificates
+
+      # Install kubectl
+      KUBECTL_VERSION="v1.30.0"
+      curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+      chmod +x /usr/local/bin/kubectl
+
+      # Fetch kubeconfig from the first node
+      mkdir -p /root/.kube
+      scp -o StrictHostKeyChecking=no ${ssh_user}@${target_ip}:/etc/rancher/k3s/k3s.yaml /root/.kube/config
+
+runcmd:
+  - [ bash, -lc, "/usr/local/bin/bastion-bootstrap.sh" ]

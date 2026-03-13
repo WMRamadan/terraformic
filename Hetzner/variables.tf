@@ -70,19 +70,19 @@ variable "lb_type" {
 }
 
 variable "enable_public_ssh" {
-  description = "Allow SSH from the public internet"
+  description = "Allow SSH from the public internet to k3s nodes"
   type        = bool
-  default     = true
+  default     = false
 }
 
-variable "vault_root_token" {
-  description = "Vault root token (used by in-cluster Vault dev server)"
+variable "ssh_allowed_cidrs" {
+  description = "CIDRs allowed to SSH into the bastion"
+  type        = list(string)
+  default     = ["62.65.58.64/32"]
+}
+
+variable "bastion_server_type" {
+  description = "Hetzner server type for bastion"
   type        = string
-  sensitive   = true
-}
-
-variable "vault_nodeport" {
-  description = "NodePort to expose Vault"
-  type        = number
-  default     = 30200
+  default     = "cpx11"
 }

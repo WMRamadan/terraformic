@@ -10,6 +10,10 @@ output "server_public_ips" {
   value = module.servers.ipv4
 }
 
-output "vault_endpoint" {
-  value = "https://${module.servers.ipv4[0]}:${var.vault_nodeport}"
+output "bastion_public_ip" {
+  value = hcloud_server.bastion.ipv4_address
+}
+
+output "bastion_private_ip" {
+  value = hcloud_server.bastion.network[0].ip
 }
