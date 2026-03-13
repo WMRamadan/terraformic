@@ -1,4 +1,4 @@
-# terraformic
+# Terraformic
 
 Multi-cloud Terraform stacks for Kubernetes.
 
