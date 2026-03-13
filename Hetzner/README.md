@@ -31,6 +31,7 @@ project_name        = "k3s-ha"
 location            = "hel1"
 ssh_allowed_cidrs   = ["x.x.x.x/32"]
 ```
+
 2. Run `terraform init` (see below).
 
 Then init:
@@ -42,7 +43,7 @@ terraform init \
   -backend-config="endpoint=REPLACE_ME"
 ```
 
-2. Run `terraform plan` to see the plan and `terraform apply` to apply the plan.
+3. Run `terraform plan` to see the plan and `terraform apply` to apply the plan.
 
 ## Access via bastion
 1. SSH into bastion:
