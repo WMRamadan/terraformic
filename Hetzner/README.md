@@ -20,20 +20,6 @@ export AWS_SECRET_ACCESS_KEY="YOUR_HETZNER_SECRET_KEY"
 export AWS_DEFAULT_REGION="eu-central"
 ```
 
-## Usage
-1. Create a `terraform.tfvars` with your settings.
-
-Example `terraform.tfvars`:
-```hcl
-hcloud_token        = "YOUR_TOKEN"
-ssh_public_key_path = "/path/to/id_ed25519.pub"
-project_name        = "k3s-ha"
-location            = "hel1"
-ssh_allowed_cidrs   = ["x.x.x.x/32"]
-```
-
-2. Run `terraform init` (see below).
-
 Then init:
 ```bash
 terraform init \
@@ -43,7 +29,18 @@ terraform init \
   -backend-config="endpoint=REPLACE_ME"
 ```
 
-3. Run `terraform plan` to see the plan and `terraform apply` to apply the plan.
+## Usage
+1. Create a `terraform.tfvars` with your settings.
+2. Run `terraform init` (see above) and `terraform apply`.
+
+Example `terraform.tfvars`:
+```hcl
+hcloud_token        = "YOUR_TOKEN"
+ssh_public_key_path = "/path/to/id_ed25519.pub"
+project_name        = "k3s-ha"
+location            = "hel1"
+ssh_allowed_cidrs   = ["x.x.x.x/32"]
+```
 
 ## Access via bastion
 1. SSH into bastion:
@@ -64,4 +61,3 @@ kubectl get nodes
 ## Notes
 - k3s version is configurable via `k3s_version` (default: latest).
 - Ubuntu image is configurable via `image` (default `ubuntu-24.04`).
-- Longhorn chart version is optional via `longhorn_version`.

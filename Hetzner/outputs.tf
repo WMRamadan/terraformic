@@ -7,7 +7,7 @@ output "load_balancer_private_ip" {
 }
 
 output "server_public_ips" {
-  value = module.servers.ipv4
+  value = concat(module.bootstrap.ipv4, module.joiners.ipv4)
 }
 
 output "bastion_public_ip" {

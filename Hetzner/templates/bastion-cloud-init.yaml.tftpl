@@ -3,6 +3,10 @@ package_update: true
 package_upgrade: true
 
 write_files:
+  - path: /root/.ssh/bastion_ed25519
+    permissions: "0600"
+    encoding: b64
+    content: ${bastion_priv_key_b64}
   - path: /usr/local/bin/bastion-bootstrap.sh
     permissions: "0755"
     content: |
@@ -12,16 +16,46 @@ write_files:
       target_ip="${target_ip}"
       ssh_user="${ssh_user}"
       kubectl_version="${kubectl_version}"
+      api_endpoint="${api_endpoint}"
 
-      apt-get install -y curl ca-certificates
+      apt-get install -y curl ca-certificates openssh-client
 
       # Install kubectl
       curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
       chmod +x /usr/local/bin/kubectl
 
-      # Fetch kubeconfig from the first node
-      mkdir -p /root/.kube
-      scp -o StrictHostKeyChecking=no ${ssh_user}@${target_ip}:/etc/rancher/k3s/k3s.yaml /root/.kube/config
+      # Install Helm
+      curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      # Wait for first node SSH
+      for i in $(seq 1 60); do
+        if ssh -i /root/.ssh/bastion_ed25519 -o StrictHostKeyChecking=no ${ssh_user}@${target_ip} "true"; then
+          break
+        fi
+        sleep 10
+      done
+
+      # Wait for kubeconfig on the first node
+      kubeconfig_ready=false
+      for i in $(seq 1 120); do
+        if ssh -i /root/.ssh/bastion_ed25519 -o StrictHostKeyChecking=no ${ssh_user}@${target_ip} "test -f /etc/rancher/k3s/k3s.yaml"; then
+          kubeconfig_ready=true
+          break
+        fi
+        sleep 10
+      done
+
+      if [[ "$kubeconfig_ready" == "true" ]]; then
+        # Fetch kubeconfig from the first node
+        mkdir -p /root/.kube
+        scp -i /root/.ssh/bastion_ed25519 -o StrictHostKeyChecking=no ${ssh_user}@${target_ip}:/etc/rancher/k3s/k3s.yaml /root/.kube/config
+      else
+        echo "k3s kubeconfig not available yet; skipping fetch for now."
+        exit 0
+      fi
+
+      # Point kubeconfig to LB endpoint instead of 127.0.0.1
+      sed -i "s#https://127.0.0.1:6443#https://${api_endpoint}:6443#g" /root/.kube/config
 
 runcmd:
   - [ bash, -lc, "/usr/local/bin/bastion-bootstrap.sh" ]

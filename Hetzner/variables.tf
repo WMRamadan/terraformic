@@ -29,9 +29,9 @@ variable "server_type" {
 }
 
 variable "image" {
-  description = "Hetzner image name (Ubuntu 24.04 default)"
+  description = "Hetzner image name (Debian 13 default)"
   type        = string
-  default     = "ubuntu-24.04"
+  default     = "debian-13"
 }
 
 variable "ssh_public_key_path" {
@@ -48,19 +48,13 @@ variable "k3s_version" {
 variable "pod_cidr" {
   description = "Pod CIDR"
   type        = string
-  default     = "10.244.0.0/16"
+  default     = "10.42.0.0/16"
 }
 
 variable "service_cidr" {
   description = "Service CIDR"
   type        = string
-  default     = "10.96.0.0/12"
-}
-
-variable "longhorn_version" {
-  description = "Longhorn Helm chart version (optional)"
-  type        = string
-  default     = ""
+  default     = "10.43.0.0/16"
 }
 
 variable "lb_type" {
@@ -78,7 +72,7 @@ variable "enable_public_ssh" {
 variable "ssh_allowed_cidrs" {
   description = "CIDRs allowed to SSH into the bastion"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = ["0.0.0.0/32"]
 }
 
 variable "bastion_server_type" {

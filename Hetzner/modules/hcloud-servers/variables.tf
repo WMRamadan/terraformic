@@ -10,6 +10,11 @@ variable "node_count" {
   type = number
 }
 
+variable "name_offset" {
+  type    = number
+  default = 0
+}
+
 variable "image" {
   type = string
 }
@@ -22,8 +27,8 @@ variable "location" {
   type = string
 }
 
-variable "ssh_key_id" {
-  type = string
+variable "ssh_key_ids" {
+  type = list(string)
 }
 
 variable "network_id" {
@@ -46,6 +51,10 @@ variable "lb_ip" {
   type = string
 }
 
+variable "bootstrap_ip" {
+  type = string
+}
+
 variable "k3s_token" {
   type = string
 }
@@ -58,25 +67,18 @@ variable "service_cidr" {
   type = string
 }
 
-variable "longhorn_version" {
-  type = string
-}
 
 variable "k3s_version" {
   type = string
 }
 
-variable "enable_public_ssh" {
+
+variable "bootstrap" {
   type    = bool
   default = false
 }
 
-variable "ssh_allowed_cidrs" {
+variable "firewall_ids" {
   type    = list(string)
   default = []
-}
-
-variable "internal_cidr" {
-  type    = string
-  default = "10.0.0.0/16"
 }

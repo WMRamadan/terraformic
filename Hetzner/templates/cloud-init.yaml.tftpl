@@ -3,17 +3,6 @@ package_update: true
 package_upgrade: true
 
 write_files:
-  - path: /etc/modules-load.d/k8s.conf
-    permissions: "0644"
-    content: |
-      overlay
-      br_netfilter
-  - path: /etc/sysctl.d/k8s.conf
-    permissions: "0644"
-    content: |
-      net.bridge.bridge-nf-call-iptables  = 1
-      net.bridge.bridge-nf-call-ip6tables = 1
-      net.ipv4.ip_forward                 = 1
   - path: /usr/local/bin/k3s-bootstrap.sh
     permissions: "0755"
     content: |
@@ -21,21 +10,25 @@ write_files:
       set -euo pipefail
 
       is_bootstrap="${is_bootstrap}"
-      lb_ip="${lb_ip}"
+      bootstrap_ip="${bootstrap_ip}"
       k3s_token="${k3s_token}"
       pod_cidr="${pod_cidr}"
       service_cidr="${service_cidr}"
-      longhorn_version="${longhorn_version}"
       k3s_version="${k3s_version}"
 
       swapoff -a
       sed -i.bak '/ swap / s/^/#/' /etc/fstab
 
-      modprobe overlay
-      modprobe br_netfilter
-      sysctl --system
+      apt-get install -y curl ca-certificates gnupg netcat-openbsd open-iscsi
 
-      apt-get install -y curl ca-certificates gnupg netcat-openbsd
+      systemctl enable --now iscsid
+
+      # Detect private IP (10.0.0.0/16)
+      private_ip=$(ip -4 addr show | awk '/inet 10\.0\./ {print $2}' | head -n1 | cut -d/ -f1)
+      if [[ -z "$private_ip" ]]; then
+        echo "Failed to detect private IP" >&2
+        exit 1
+      fi
 
       export INSTALL_K3S_VERSION="$k3s_version"
       export K3S_TOKEN="$k3s_token"
@@ -43,40 +36,38 @@ write_files:
       if [[ "$is_bootstrap" == "true" ]]; then
         curl -sfL https://get.k3s.io | sh -s - server \
           --cluster-init \
-          --tls-san ${lb_ip} \
+          --tls-san ${bootstrap_ip} \
+          --node-ip $private_ip \
+          --advertise-address $private_ip \
           --cluster-cidr ${pod_cidr} \
           --service-cidr ${service_cidr}
 
-        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        # Remove control-plane taint so this node acts as control-plane + worker
+        # kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule- || true
 
         # Install Helm
         curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-        # Install Longhorn
-        lh_arg=""
-        if [[ -n "$longhorn_version" ]]; then
-          lh_arg="--version ${longhorn_version}"
-        fi
-        helm repo add longhorn https://charts.longhorn.io
-        helm repo update
-        kubectl create namespace longhorn-system || true
-        helm install longhorn longhorn/longhorn -n longhorn-system $lh_arg
-        kubectl -n longhorn-system rollout status deploy/longhorn-manager --timeout=10m
-
       else
-        # Wait for API endpoint
-        for i in $(seq 1 60); do
-          if nc -z ${lb_ip} 6443; then
+        # Wait for bootstrap API endpoint
+        for i in $(seq 1 120); do
+          if curl -k -sf https://${bootstrap_ip}:6443/cacerts >/dev/null; then
             break
           fi
           sleep 10
         done
 
-        export K3S_URL="https://${lb_ip}:6443"
         curl -sfL https://get.k3s.io | sh -s - server \
+          --server https://${bootstrap_ip}:6443 \
           --tls-san ${lb_ip} \
+          --tls-san ${bootstrap_ip} \
+          --node-ip $private_ip \
+          --advertise-address $private_ip \
           --cluster-cidr ${pod_cidr} \
           --service-cidr ${service_cidr}
+
+          # Remove control-plane taint so this node acts as control-plane + worker
+          # kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule- || true
       fi
 
 runcmd:
