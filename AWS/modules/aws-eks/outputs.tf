@@ -15,5 +15,5 @@ output "node_group_names" {
 }
 
 output "efs_id" {
-  value = aws_efs_file_system.this.id
+  value = var.enable_efs ? aws_efs_file_system.this[0].id : null
 }
