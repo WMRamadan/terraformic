@@ -6,6 +6,7 @@ Multi-cloud Terraform stacks for Kubernetes.
 - `Hetzner/` Hetzner Cloud HA kubeadm cluster
 - `AWS/` AWS EKS cluster (eu-central-1)
 - `GCP/` Google Cloud GKE cluster (EU region)
+- `Qemu/` Remote KVM/QEMU HA k3s cluster (HAProxy + 3 server nodes)
 
 ## Backend state
 Each cloud folder has a `backend.tf` with `REPLACE_ME_*` placeholders. Update those values before running `terraform init`.

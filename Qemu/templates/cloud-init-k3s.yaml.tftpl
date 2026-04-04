@@ -1,0 +1,61 @@
+#cloud-config
+hostname: ${hostname}
+package_update: true
+packages:
+  - curl
+  - qemu-guest-agent
+  - open-iscsi
+  - nfs-common
+  - netcat-openbsd
+
+users:
+  - default
+  - name: ${ssh_username}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+%{ if ssh_authorized_key != "" ~}
+    ssh_authorized_keys:
+      - ${ssh_authorized_key}
+%{ endif ~}
+
+ssh_pwauth: true
+chpasswd:
+  expire: false
+  list:
+    - ${ssh_username}:${ssh_password}
+
+write_files:
+  - path: /usr/local/bin/bootstrap-k3s.sh
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      export INSTALL_K3S_VERSION='${k3s_version}'
+      export K3S_TOKEN='${k3s_token}'
+
+      until nc -z ${lb_ip} 6443 || [ '${bootstrap}' = 'true' ]; do
+        sleep 5
+      done
+
+      if [ '${bootstrap}' = 'true' ]; then
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --cluster-init \
+          --tls-san '${lb_ip}' \
+          --node-ip '${node_ip}' \
+          --advertise-address '${node_ip}' \
+          --cluster-cidr '${cluster_cidr}' \
+          --service-cidr '${service_cidr}'
+      else
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --server 'https://${lb_ip}:6443' \
+          --node-ip '${node_ip}' \
+          --advertise-address '${node_ip}' \
+          --cluster-cidr '${cluster_cidr}' \
+          --service-cidr '${service_cidr}'
+      fi
+
+runcmd:
+  - systemctl enable --now qemu-guest-agent
+  - systemctl enable --now iscsid
+  - /usr/local/bin/bootstrap-k3s.sh

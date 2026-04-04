@@ -1,0 +1,32 @@
+#cloud-config
+hostname: ${hostname}
+package_update: true
+packages:
+  - haproxy
+  - qemu-guest-agent
+
+users:
+  - default
+  - name: ${ssh_username}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+%{ if ssh_authorized_key != "" ~}
+    ssh_authorized_keys:
+      - ${ssh_authorized_key}
+%{ endif ~}
+
+ssh_pwauth: true
+chpasswd:
+  expire: false
+  list:
+    - ${ssh_username}:${ssh_password}
+
+write_files:
+  - path: /etc/haproxy/haproxy.cfg
+    permissions: '0644'
+    content: |
+${indent(6, haproxy_cfg)}
+
+runcmd:
+  - systemctl enable --now qemu-guest-agent
+  - systemctl enable --now haproxy
